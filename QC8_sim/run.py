@@ -10,7 +10,7 @@ from Classes import (
     ME0_Geometry,
     GEMTrajectorySimulator,
     Plots,
-    tally_hits_by_eta,
+    count_hits_by_eta,
 )
 
 def write_text_report(
@@ -19,7 +19,7 @@ def write_text_report(
     res: dict,
     eta_counts: Optional[np.ndarray],
     eta_res: Optional[dict],
-    fname: str = "Summary.txt",
+    fname: str = "summary.txt",
 ):
     """Summary of simulation """
     outdir.mkdir(parents=True, exist_ok=True)
@@ -112,7 +112,7 @@ def main():
         # ------------------------------------------        
         # Static 4 views
         # ------------------------------------------
-        plots.four_views(show_eta=True, filename="Stack Geometry.png") # -> Stack Geometry.png
+        plots.four_views(show_eta=True, filename="stack_geometry.png") # -> Stack Geometry.png
         
         # ------------------------------------------
         # Interactive 4 views
@@ -145,10 +145,10 @@ def main():
     eta_counts = None
     if 'hit_xy' in res and res['hit_xy'] is not None:
         try:
-            tally = tally_hits_by_eta(geom, res['hit_xy'])
-            eta_counts = np.asarray(tally.get('counts'))
+            counts = count_hits_by_eta(geom, res['hit_xy'])
+            eta_counts = np.asarray(counts.get('counts'))
         except Exception as e:
-            print("tally_hits_by_eta failed:", e)
+            print("count_hits_by_eta failed:", e)
 
 
     # ------------------------------------------

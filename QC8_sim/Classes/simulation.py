@@ -160,7 +160,7 @@ class GEMTrajectorySimulator:
         return {"totals": totals, "eff": eff, "n_coinc": n_coinc}
 
 # Utility: count (x,y) samples per η per layer
-def tally_hits_by_eta(geom: ME0_Geometry, hit_xy_layer_list):
+def count_hits_by_eta(geom: ME0_Geometry, hit_xy_layer_list):
     """
     hit_xy_layer_list: same structure as result['hit_xy'] (list of (x,y) per layer)
     Returns: dict with 'counts' (shape n_layers x 8) and 'totals' (per layer)
