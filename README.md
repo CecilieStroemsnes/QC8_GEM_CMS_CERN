@@ -1,29 +1,53 @@
 # Quality Control 8: Cosmic Ray efficiency simulation
 
+This project simulates the detection efficiency of the ME0 GEM detector stack using cosmic ray muons.
+
+It models trajectories using $\cos^2(\theta)$ angular distribution, applies scintillator coincidence, and produces efficiency plots per layer and per $\eta$-region
+
+
 ## Layout
 - `Classes/`
   - `geometry.py` — ME0_Geometry (detector + scintillator layout)
   - `simulation.py` — GEMTrajectorySimulator (+ `tally_hits_by_eta` helper)
   - `plots.py` — Plots 
   - `__init__.py` — exports the public API
-- `run.py` — Script to run code
-- `plots` - Folder with all outputs
+- `run.py` — Main script to run the simulation
+- `Outputs` - Folder with all plots and summary text
+
+## Requirements
+- Used Python 3.9
+- Packages: `pip install numpy matplotlib`
 
 ## Quickstart
+Run with default settings (stack positioned high, close to the top scintillator):
 ```bash
-python run.py - 
+python run.py 
 ```
-This runs the default setting with the stack positioned high (close to the top scintillator).
 
-```
+Run with user-defined position (e.g, low):
+```bash
 python run.py --position low 
 ```
-Here, the position is user-defined.
 
+### Outputs:
+- Geometry plots: Stack Geometry.png
+- Efficiency histogram: efficiency_hist.png
+- Hit maps: Hit_maps.png
+- 3D trajectories: 3D_trajectories.png
+- η-efficiency per layer: eta_eff_by_layer.png
+- X-occupancy per η-region: x_occupancy_eta_layer*.png
+- Text summary: summary.txt
 
-# ----------------- Simulation Notes ----------------- 
+#### Optional outputs:
+In run.py (main), there is an interactive option for the stack geometry and the 3D trajectory plots.
+These should be out-commented if used.
 
-# Cosmic rays
+### Example output
+<img width="1543" height="1580" alt="3D_trajectories" src="https://github.com/user-attachments/assets/528315f6-4aed-43f2-bd1b-6c4e12b04d9d" />
+
+# Physics Notes - Cosmic Ray Angular Distribution
+
+## Cosmic rays
 
 For cosmic rays, we use a $cos^2(\theta)$ distribution for downward-going muons.
 
