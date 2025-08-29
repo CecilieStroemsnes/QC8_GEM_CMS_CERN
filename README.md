@@ -21,7 +21,7 @@ python run.py --position low
 Here, the position is user-defined.
 
 
-# ------------ Simulation Notes ------------
+# ----------------- Simulation Notes ----------------- 
 
 # Cosmic rays
 
