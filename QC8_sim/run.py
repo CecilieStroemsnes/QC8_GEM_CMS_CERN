@@ -170,6 +170,16 @@ def main():
         plots.plot_3d_trajectories_from_sim(
             sim, N=60_000, max_plot=600, elev=22, azim=-35, show_eta=True
         )  # -> 3D_trajectories.png
+
+    # ------------------------------------------
+    # -- #3D interactive trajectory plot -------
+    # ------------------------------------------
+    #if hasattr(plots, "plot_3d_trajectories_from_sim"):
+    #    plots.plot_3d_trajectories_from_sim(
+    #        sim, N=60_000, max_plot=600, elev=22, azim=-35, show_eta=True,
+    #        interactive=True,       # enables rotation + snapshot
+    #        save_key="s"            # press s to save; closing also saves once
+    #    )  # -> 3D_trajectories.png
     
     # ------------------------------------------
     # -- X occupancy per layer -----------------

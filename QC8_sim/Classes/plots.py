@@ -456,7 +456,10 @@ class Plots:
     def plot_3d_trajectories_from_sim(self, sim, N=60_000, max_plot=600,
                                     elev=22, azim=-35, rng=None, seed=None,
                                     show_eta=False, y_breaks=None, y_mm=None,
-                                    mm_bottom=None, mm_top=None):
+                                    mm_bottom=None, mm_top=None,
+                                    interactive: bool = False,
+                                    save_key: str = "s",
+                                    filename: str = "3D_trajectories.png"):
         # use provided rng, else build from seed, else reuse simulator's
         if rng is None:
             if seed is not None:
@@ -486,7 +489,10 @@ class Plots:
         return self.plot_3d_trajectories(x0, y0, z0, v_x, v_y, v_z, idx,
                                         elev=elev, azim=azim,
                                         show_eta=show_eta, y_breaks=y_breaks, y_mm=y_mm,
-                                        mm_bottom=mm_bottom, mm_top=mm_top)
+                                        mm_bottom=mm_bottom, mm_top=mm_top,
+                                        filename=filename,
+                                        interactive=interactive,
+                                        save_key=save_key)
 
 
     # ------------------------------------------
