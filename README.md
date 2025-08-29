@@ -2,7 +2,7 @@
 
 This project simulates the detection efficiency of the ME0 GEM detector stack using cosmic ray muons.
 
-It models trajectories using $\cos^2(\theta)$ angular distribution, applies scintillator coincidence, and produces efficiency plots per layer and per $\eta$-region
+It models trajectories using $\cos^2(\theta)$ angular distribution, applies scintillator coincidence, and produces efficiency plots per layer and per $\eta$-region.
 
 
 ## Layout
@@ -43,7 +43,7 @@ In run.py (main), there is an interactive option for the stack geometry and the 
 These should be out-commented if used.
 
 ### Example output
-<img width="1543" height="1580" alt="3D_trajectories" src="https://github.com/user-attachments/assets/528315f6-4aed-43f2-bd1b-6c4e12b04d9d" />
+<img width="1043" height="1080" alt="3D_trajectories" src="https://github.com/user-attachments/assets/528315f6-4aed-43f2-bd1b-6c4e12b04d9d" />
 
 # Physics Notes - Cosmic Ray Angular Distribution
 
