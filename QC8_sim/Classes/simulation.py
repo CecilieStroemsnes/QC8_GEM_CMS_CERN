@@ -31,10 +31,10 @@ class GEMTrajectorySimulator:
         v_z = -mu  # downward-going
         return v_x, v_y, v_z
     
-    def simulate_efficiency(self, N=100_000, return_hit_xy=False, max_store=5000):
+    def simulate_acceptance(self, N=100_000, return_hit_xy=False, max_store=5000):
         """
         Simulate N muons starting at the top scintillator.
-        Returns efficiencies per GEM layer and optional hit coordinates.
+        Returns acceptance per GEM layer and optional hit coordinates.
         """
         # 1) Sample starting positions uniformly on the top scintillator
         x0 = self.rng.uniform(self.geom.scin_xmin, self.geom.scin_xmax, size=N)
@@ -67,7 +67,7 @@ class GEMTrajectorySimulator:
                 "n_generated": n_generated,
                 "n_coinc": 0,
                 "layer_hits": hits,
-                "efficiency": np.zeros(self.geom.n_layers),
+                "acceptance": np.zeros(self.geom.n_layers),
                 "hit_xy": hit_xy
             }
 
@@ -95,19 +95,19 @@ class GEMTrajectorySimulator:
                 else:
                     hit_xy[i] = (np.array([]), np.array([]))
 
-        # Calculate efficiency per layer
-        efficiency = hits / max(n_coinc, 1)
+        # Calculate acceptance per layer
+        acceptance = hits / max(n_coinc, 1)
         return {
             "n_generated": n_generated,
             "n_coinc": n_coinc,
             "layer_hits": hits,
-            "efficiency": efficiency,
+            "acceptance": acceptance,
             "hit_xy": hit_xy
         }
     
-    def simulate_eta_efficiency(self, N=100_000):
+    def simulate_eta_acceptance(self, N=100_000):
         """
-        Per-eta efficiencies for each layer relative to the
+        Per-eta acceptance for each layer relative to the
         top ∧ bottom coincidence baseline.
         """
 
@@ -137,7 +137,7 @@ class GEMTrajectorySimulator:
 
         # If no coincident events, return early
         if n_coinc == 0:
-            return {"totals": totals, "eff": np.zeros_like(totals, float), "n_coinc": 0}
+            return {"totals": totals, "acc": np.zeros_like(totals, float), "n_coinc": 0}
 
         # 3) Intersections with each GEM layer and eta counting
         for l, z_layer in enumerate(self.geom.layer_z):
@@ -155,9 +155,9 @@ class GEMTrajectorySimulator:
             for k in range(1, K+1):
                 totals[l, k-1] = np.count_nonzero(eta_idx == k)
 
-        # Calculate efficiencies per eta bin
-        eff = totals / max(n_coinc, 1)  # <-- denominator is the same for all k
-        return {"totals": totals, "eff": eff, "n_coinc": n_coinc}
+        # Calculate acceptance per eta bin
+        acc = totals / max(n_coinc, 1)  # <-- denominator is the same for all k
+        return {"totals": totals, "acc": acc, "n_coinc": n_coinc}
 
 # Utility: count (x,y) samples per η per layer
 def count_hits_by_eta(geom: ME0_Geometry, hit_xy_layer_list):

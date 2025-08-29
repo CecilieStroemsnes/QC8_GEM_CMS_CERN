@@ -18,10 +18,10 @@ class Plots:
     """
     Plotting for ME0 stack:
         - geometry views (with optional η overlays)
-        - per-layer efficiency histograms
+        - per-layer acceptance histograms
         - per-layer hit maps (with optional η overlays)
         - 3D trajectories (with optional η overlays)
-        - per-η efficiency bar charts
+        - per-η acceptance bar charts
         - per-layer x-occupancy by η
     """
 
@@ -232,33 +232,33 @@ class Plots:
             plt.close(fig)
 
     # ------------------------------------------
-    # ---------- Plot efficiency ----------
+    # ---------- Plot acceptance ----------
     # ------------------------------------------
-    def plot_efficiency_histogram(
+    def plot_acceptance_histogram(
         self,
         result,
-        filename: Optional[str] = "efficiency_hist.png",
+        filename: Optional[str] = "acceptance_hist.png",
         ylim: tuple[float, float] | None = (0.9, 1.0),
         as_percent: bool = False,
         annotate: bool = True,
     ):
         layers = np.arange(1, self.geom.n_layers + 1)
-        eff = np.asarray(result["efficiency"], float)
+        acc = np.asarray(result["acceptance"], float)
 
         fig, ax = plt.subplots(figsize=(6, 4), dpi=150)
-        bars = ax.bar(layers, eff if not as_percent else eff*100,
+        bars = ax.bar(layers, acc if not as_percent else acc*100,
                     color="#4da3ff", edgecolor="navy", alpha=0.85)
 
         ax.set_xlabel("Layer", fontsize=12)
-        ax.set_ylabel("Efficiency" + (" (%)" if as_percent else ""), fontsize=12)
-        ax.set_title("Detection Efficiency per GEM Layer", fontsize=14, pad=12, weight="bold")
+        ax.set_ylabel("Acceptance" + (" (%)" if as_percent else ""), fontsize=12)
+        ax.set_title("Detection Acceptance per GEM Layer", fontsize=14, pad=12, weight="bold")
 
         if ylim is not None:
             lo, hi = (ylim if not as_percent else (ylim[0]*100, ylim[1]*100))
             ax.set_ylim(lo, hi)
         else:
             # auto with a touch of headroom
-            yvals = eff if not as_percent else eff*100
+            yvals = acc if not as_percent else acc*100
             hi = float(np.nanmax(yvals)) if yvals.size else (100 if as_percent else 1)
             ax.set_ylim(0, hi * 1.05)
 
@@ -496,7 +496,7 @@ class Plots:
 
 
     # ------------------------------------------
-    # ---------- Per-eta efficiency plots ------
+    # ---------- Per-eta acceptance plots ------
     # ------------------------------------------
  
     def _eta_polys_from_args(self, y_breaks=None, y_mm=None, mm_bottom=None, mm_top=None):
@@ -532,15 +532,15 @@ class Plots:
                 ax.plot(P[:,0], P[:,1], z, color=edgecolor, lw=lw, alpha=alpha)
 
     # ------------------------------------------
-    # ---------- Per-eta efficiency bar charts ------
+    # ---------- Per-eta acceptance bar charts ------
     # ------------------------------------------
 
-    def plot_eta_efficiency_by_layer(
+    def plot_eta_acceptance_by_layer(
         self,
         eta_result: dict,
         ylim: Optional[tuple] = None,
         annotate: bool = True,
-        filename: Optional[str] = "eta_eff_by_layer.png",
+        filename: Optional[str] = "eta_acc_by_layer.png",
         bar_face: str = "#57c28a",
         bar_edge: str = "#2d7a56",
         show_percent: bool = True,        
@@ -548,21 +548,21 @@ class Plots:
         dpi: int = 150,
     ):
         """
-        Per-η efficiencies (relative to coincidence baseline) for each layer.
+        Per-η acceptance (relative to coincidence baseline) for each layer.
         If show_errorbars=True and eta_result has 'n_coinc' and 'totals',
-        error bars show conditional efficiency σ ≈ sqrt(p*(1-p)/N_eta).
+        error bars show conditional acceptance σ ≈ sqrt(p*(1-p)/N_eta).
         """
-        eff    = np.asarray(eta_result["eff"])               # (L, 8); sums to layer ε
-        totals = np.asarray(eta_result.get("totals", np.zeros_like(eff)))  # coincidences per η
+        acc    = np.asarray(eta_result["acc"])               # (L, 8); sums to layer ε
+        totals = np.asarray(eta_result.get("totals", np.zeros_like(acc)))  # coincidences per η
         n_coinc = int(eta_result.get("n_coinc", 0))          # total coincidences (baseline)
-        L, K = eff.shape
+        L, K = acc.shape
 
         # choose format (fraction vs percent)
         scale = 100.0 if show_percent else 1.0
-        ylab  = "Efficiency (%)" if show_percent else "Efficiency"
+        ylab  = "Acceptance (%)" if show_percent else "Acceptance"
 
         # sensible global y-limit
-        max_val = float(np.nanmax(eff)) if eff.size else 1.0
+        max_val = float(np.nanmax(acc)) if acc.size else 1.0
         if ylim is None:
             headroom = 1.12
             ylim = (0.0, min(1.0, max_val * headroom))
@@ -577,21 +577,21 @@ class Plots:
         # Precompute error bars if requested
         yerr = None
         if show_errorbars and n_coinc > 0 and totals.size:
-            hits = eff * n_coinc                 # hits per (layer, η)
+            hits = acc * n_coinc                 # hits per (layer, η)
             with np.errstate(divide='ignore', invalid='ignore'):
-                p_cond = np.where(totals > 0, hits / totals, np.nan)   # conditional efficiency
+                p_cond = np.where(totals > 0, hits / totals, np.nan)   # conditional acceptance
                 se = np.where(totals > 0, np.sqrt(p_cond*(1-p_cond)/totals), np.nan)
             yerr = se * scale                    # scale to percent if needed
 
         for li, ax in enumerate(axs, start=1):
-            y = eff[li - 1] * scale
+            y = acc[li - 1] * scale
             bars = ax.bar(x, y, color=bar_face, edgecolor=bar_edge, alpha=0.9)
 
             # optional error bars (on top of bars)
             if yerr is not None:
                 ax.errorbar(x, y, yerr=yerr[li - 1], fmt='none', ecolor=bar_edge, elinewidth=1, capsize=2, alpha=0.9)
 
-            layer_eps = float(eff[li - 1].sum())
+            layer_eps = float(acc[li - 1].sum())
             ax.set_title(f"Layer {li}  (ε = {layer_eps:.3f})", fontsize=12)
             ax.set_xticks(x); ax.set_xticklabels(xlabels)
             ax.set_ylim(ylim[0]*scale, ylim[1]*scale)
@@ -610,7 +610,7 @@ class Plots:
                                 ha="center", va="bottom", fontsize=9, clip_on=True)
 
         axs[0].set_ylabel(ylab)
-        fig.suptitle("Per-eta efficiency by layer", fontsize=14, y=0.99)
+        fig.suptitle("Per-eta acceptance by layer", fontsize=14, y=0.99)
         fig.tight_layout(rect=(0, 0, 1, 0.96))
 
         self._save(filename)
@@ -625,7 +625,7 @@ class Plots:
         basename: str = "x_occupancy_eta_layer.png",
         share_y: bool = False, y_pad: float = 0.08,
         show: bool = False,
-        panel_style: str = "eta-left-count-corner",   # <- NEW
+        panel_style: str = "eta-left-count-corner",  
     ):
         if not hasattr(self.geom, "eta_polys"):
             raise RuntimeError("Eta layout not set. Call geom.enable_default_me0_eta() first.")

@@ -28,7 +28,7 @@ def write_text_report(
     n_gen   = int(res.get("n_generated", 0))
     n_coinc = int(res.get("n_coinc", 0))
     layer_hits = np.asarray(res.get("layer_hits", []), dtype=int)
-    eff = np.asarray(res.get("efficiency", []), dtype=float)
+    acc = np.asarray(res.get("acceptance", []), dtype=float)
 
     misses = (n_coinc - layer_hits) if layer_hits.size else np.array([], dtype=int)
     total_hits_layers   = int(layer_hits.sum()) if layer_hits.size else 0
@@ -41,9 +41,9 @@ def write_text_report(
 
         if layer_hits.size:
             f.write("Per-layer results (relative to coincidence baseline):\n")
-            f.write("Layer  Hits     Misses   Efficiency\n")
+            f.write("Layer  Hits     Misses   Acceptance\n")
             f.write("-----  -------- -------- ----------\n")
-            for i, (h, m, e) in enumerate(zip(layer_hits, misses, eff), start=1):
+            for i, (h, m, e) in enumerate(zip(layer_hits, misses, acc), start=1):
                 f.write(f"{i:>5}  {h:>8} {m:>8}  {e:>10.4f}\n")
             f.write("-----  -------- -------- ----------\n")
             f.write(f"TOTAL  {total_hits_layers:>8} {total_misses_layers:>8}\n\n")
@@ -61,16 +61,16 @@ def write_text_report(
             per_eta = eta_counts.sum(axis=0)
             f.write(" Sum  " + " ".join([f"{int(x):>3}" for x in per_eta]) + f"   |  {int(per_eta.sum()):>4}\n\n")
 
-        if eta_res is not None and "eff" in eta_res:
-            eff_eta = np.asarray(eta_res["eff"])      # (L, K)
-            totals  = np.asarray(eta_res.get("totals", np.zeros_like(eff_eta)))
-            L, K = eff_eta.shape
-            f.write("Per-η efficiencies by layer (relative to coincidence baseline):\n")
+        if eta_res is not None and "acc" in eta_res:
+            acc_eta = np.asarray(eta_res["acc"])      # (L, K)
+            totals  = np.asarray(eta_res.get("totals", np.zeros_like(acc_eta)))
+            L, K = acc_eta.shape
+            f.write("Per-η acceptances by layer (relative to coincidence baseline):\n")
             header = "Layer " + " ".join([f"η{k:>2}" for k in range(1, K+1)]) + "   |  Layer ε"
             f.write(header + "\n" + "-" * len(header) + "\n")
             for ell in range(L):
-                cols = " ".join([f"{eff_eta[ell,k]:>5.3f}" for k in range(K)])
-                f.write(f"{ell+1:>5} {cols}   |  {eff_eta[ell].sum():>7.3f}\n")
+                cols = " ".join([f"{acc_eta[ell,k]:>5.3f}" for k in range(K)])
+                f.write(f"{ell+1:>5} {cols}   |  {acc_eta[ell].sum():>7.3f}\n")
             f.write("-" * len(header) + "\n")
             f.write("(totals row below are event counts per η across layers)\n")
             f.write("Totals per η (counts): " + " ".join([str(int(x)) for x in totals.sum(axis=0)]) + "\n\n")
@@ -132,12 +132,12 @@ def main():
 
 
     # ------------------------------------------
-    # -- Efficiency Simulation -----------------
+    # -- Acceptance Simulation -----------------
     # ------------------------------------------
-    res = sim.simulate_efficiency(N=100_000, return_hit_xy=True)
+    res = sim.simulate_acceptance(N=100_000, return_hit_xy=True)
     print(f"Generated {res.get('n_generated')} muons, {res.get('n_coinc')} with scintillator coincidence.")
     print("Layer hits:", res.get('layer_hits'))
-    print("Layer efficiencies:", res.get('efficiency'))
+    print("Layer acceptances:", res.get('acceptance'))
 
     # ------------------------------------------
     # -- Per η hit counts ----------------------
@@ -152,10 +152,10 @@ def main():
 
 
     # ------------------------------------------
-    # -- Efficiency plot (per layer) -----------
+    # -- Acceptance plot (per layer) -----------
     # ------------------------------------------
-    if hasattr(plots, "plot_efficiency_histogram"):
-        plots.plot_efficiency_histogram(res) #-> efficiency_histogram.png
+    if hasattr(plots, "plot_acceptance_histogram"):
+        plots.plot_acceptance_histogram(res) #-> acceptance_histogram.png
     
     # ------------------------------------------
     # -- Hit maps (per layer) ------------------
@@ -189,19 +189,19 @@ def main():
 
 
     # ------------------------------------------
-    # -- Efficiency vs eta ---------------------
+    # -- Acceptance vs eta ---------------------
     # ------------------------------------------
     eta_res: Optional[dict] = None
-    if hasattr(sim, "simulate_eta_efficiency"):
+    if hasattr(sim, "simulate_eta_acceptance"):
         try:
-            eta_res = sim.simulate_eta_efficiency(N=100_000)
-            if hasattr(plots, "plot_eta_efficiency_by_layer"):
-                # This saves to plots/eta_eff_by_layer.png by default
-                plots.plot_eta_efficiency_by_layer(eta_res, annotate=True)
+            eta_res = sim.simulate_eta_acceptance(N=100_000)
+            if hasattr(plots, "plot_eta_acceptance_by_layer"):
+                # This saves to plots/eta_acc_by_layer.png by default
+                plots.plot_eta_acceptance_by_layer(eta_res, annotate=True)
                 # or give a custom name:
-                # plots.plot_eta_efficiency_by_layer(eta_res, annotate=True, filename="eta_eff_by_layer.png")
+                # plots.plot_eta_acceptance_by_layer(eta_res, annotate=True, filename="eta_acc_by_layer.png")
         except Exception as e:
-            print("simulate_eta_efficiency failed:", e)
+            print("simulate_eta_acceptance failed:", e)
 
     # ------------------------------------------
     # -- Write text summary --------------------
