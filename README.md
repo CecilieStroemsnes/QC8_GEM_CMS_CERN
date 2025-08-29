@@ -43,7 +43,7 @@ In run.py (main), there is an interactive option for the stack geometry and the 
 These should be out-commented if used.
 
 ### Example output
-<img width="1043" height="1080" alt="3D_trajectories" src="https://github.com/user-attachments/assets/528315f6-4aed-43f2-bd1b-6c4e12b04d9d" />
+<img width="543" height="580" alt="3D_trajectories" src="https://github.com/user-attachments/assets/528315f6-4aed-43f2-bd1b-6c4e12b04d9d" />
 
 # Physics Notes - Cosmic Ray Angular Distribution
 
