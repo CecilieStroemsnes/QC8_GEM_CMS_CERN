@@ -1,16 +1,10 @@
 # run.py — generate & save all plots + write a text summary (Py3.9 compatible)
 import matplotlib
-for bk in ("MacOSX", "QtAgg", "Qt5Agg", "TkAgg"):
-    try:
-        matplotlib.use(bk)
-        break
-    except Exception:
-        pass
-
-import matplotlib.pyplot as plt
 from pathlib import Path
-from typing import Optional
 import numpy as np
+import matplotlib.pyplot as plt
+from typing import Optional
+import argparse
 
 from Classes import (
     ME0_Geometry,
@@ -19,37 +13,13 @@ from Classes import (
     tally_hits_by_eta,
 )
 
-def save_new_figs(make_plot, outdir: Path, name: str):
-    """Run a plotting function and save any figures it created."""
-    before = set(plt.get_fignums())
-    make_plot()
-    after = set(plt.get_fignums())
-    new = sorted(after - before)
-    outdir.mkdir(parents=True, exist_ok=True)
-
-    if not new:
-        fp = outdir / (name if name.endswith(".png") else f"{name}.png")
-        plt.gcf().savefig(fp, dpi=200, bbox_inches="tight")
-        plt.close("all")
-        return
-
-    if len(new) == 1 and name.endswith(".png"):
-        plt.figure(new[0])
-        plt.savefig(outdir / name, dpi=200, bbox_inches="tight")
-    else:
-        stem = name[:-4] if name.endswith(".png") else name
-        for i, num in enumerate(new, 1):
-            plt.figure(num)
-            plt.savefig(outdir / f"{stem}_{i}.png", dpi=200, bbox_inches="tight")
-    plt.close("all")
-
 def write_text_report(
     outdir: Path,
     geom,
     res: dict,
     eta_counts: Optional[np.ndarray],
     eta_res: Optional[dict],
-    fname: str = "summary.txt",
+    fname: str = "Summary.txt",
 ):
     """Summary of simulation """
     outdir.mkdir(parents=True, exist_ok=True)
@@ -112,13 +82,18 @@ def write_text_report(
     print(f"Summary written to: {fp.resolve()}")
 
 def main():
-    out = Path("plots")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--position", choices=["high", "low"], default="high",
+                        help="Choose geometry position (default: high)")
+    args = parser.parse_args()
+    
+    out = Path("Outputs")
     out.mkdir(exist_ok=True)
 
     # ------------------------------------------
     # -- Geometry ------------------------------
     # ------------------------------------------
-    geom = ME0_Geometry(position="high")
+    geom = ME0_Geometry(position=args.position)
     if hasattr(geom, "enable_default_me0_eta"):
         geom.enable_default_me0_eta()
 
@@ -211,8 +186,10 @@ def main():
         try:
             eta_res = sim.simulate_eta_efficiency(N=100_000)
             if hasattr(plots, "plot_eta_efficiency_by_layer"):
-                save_new_figs(lambda: plots.plot_eta_efficiency_by_layer(eta_res, annotate=True),
-                              out, "eta_eff_by_layer.png")
+                # This saves to plots/eta_eff_by_layer.png by default
+                plots.plot_eta_efficiency_by_layer(eta_res, annotate=True)
+                # or give a custom name:
+                # plots.plot_eta_efficiency_by_layer(eta_res, annotate=True, filename="eta_eff_by_layer.png")
         except Exception as e:
             print("simulate_eta_efficiency failed:", e)
 

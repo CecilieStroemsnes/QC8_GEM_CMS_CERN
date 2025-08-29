@@ -537,8 +537,8 @@ class Plots:
         filename: Optional[str] = "eta_eff_by_layer.png",
         bar_face: str = "#57c28a",
         bar_edge: str = "#2d7a56",
-        show_percent: bool = True,          # NEW
-        show_errorbars: bool = False,       # NEW (binomial on conditional eff per-η)
+        show_percent: bool = True,        
+        show_errorbars: bool = False,    
         dpi: int = 150,
     ):
         """
@@ -607,11 +607,7 @@ class Plots:
         fig.suptitle("Per-eta efficiency by layer", fontsize=14, y=0.99)
         fig.tight_layout(rect=(0, 0, 1, 0.96))
 
-        # save
-        if filename is None:
-            filename = "eta_eff_by_layer.png"
         self._save(filename)
-        #plt.show()
 
     # ------------------------------------------
     # ---------- Per-layer x-occupancy by eta ------
@@ -677,7 +673,6 @@ class Plots:
                     # "none" or any other string → no panel title
                     pass
 
-            # shorter, cleaner suptitle
             fig.suptitle(f"Layer {li+1} · x-occupancy by η", fontsize=14, y=0.99)
             plt.tight_layout()
             self._save(f"{basename}{li+1}.png")
