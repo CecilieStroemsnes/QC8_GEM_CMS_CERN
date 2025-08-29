@@ -11,15 +11,21 @@
 
 ## Quickstart
 ```bash
-python run.py
+python run.py - 
 ```
+This runs the default setting with the stack positioned high (close to the top scintillator).
+
+```
+python run.py --position low 
+```
+Here, the position is user-defined.
 
 
 # ------------ Simulation Notes ------------
 
 # Cosmic rays
 
-For cosmic rays we use a $cos^2(\theta)$ distribution for downward-going muons.
+For cosmic rays, we use a $cos^2(\theta)$ distribution for downward-going muons.
 
 
 $\theta$ is the zenith angle ($\theta$ = 0 is straight down, and $\theta$ increases towards the horizon).
