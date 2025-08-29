@@ -1,29 +1,21 @@
-# GEM Simulation (split modules)
-
-This is a cleanit of your notebook into three focused modules plus a runner.
+# Quality Control 8: Cosmic Ray efficiency simulation
 
 ## Layout
-- `gemsim_pkg/`
+- `Classes/`
   - `geometry.py` — ME0_Geometry (detector + scintillator layout)
   - `simulation.py` — GEMTrajectorySimulator (+ `tally_hits_by_eta` helper)
-  - `plots.py` — Plots (all visuals)
+  - `plots.py` — Plots 
   - `__init__.py` — exports the public API
-- `run.py` — example script that wires it together
+- `run.py` — Script to run code
+- `plots` - Folder with all outputs
 
 ## Quickstart
 ```bash
 python run.py
 ```
 
-Or import in your own scripts:
-```python
-from gemsim_pkg import ME0_Geometry, GEMTrajectorySimulator, Plots, tally_hits_by_eta
-```
 
-## Notes
-- I moved `tally_hits_by_eta` into `simulation.py` to stick to the "three files" structure.
-- If you later add more generic helpers, consider a `utils.py` again.
-
+# ------------ Simulation Notes ------------
 
 # Cosmic rays
 
