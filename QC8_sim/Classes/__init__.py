@@ -1,4 +1,3 @@
-# gemsim_pkg: split into geometry, simulation, plots
 from .geometry import ME0_Geometry
 from .simulation import GEMTrajectorySimulator, tally_hits_by_eta
 from .plots import Plots
