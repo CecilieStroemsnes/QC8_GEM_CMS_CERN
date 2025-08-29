@@ -39,6 +39,12 @@ Layer η 1 η 2 η 3 η 4 η 5 η 6 η 7 η 8   |  Layer ε
 (totals row below are event counts per η across layers)
 Totals per η (counts): 9156 17546 18490 16255 12994 9579 5348 1584
 
+
+--- Exactly 5-of-6 layer hits ---
+Coincidences considered      : 15642
+Tracks with exactly 5/6 hits : 88 (0.56%)
+Missed-by-layer counts       : L1:14 L2:0 L3:0 L4:0 L5:0 L6:74
+
 Notes:
  - "Misses" are per-layer: misses = coincidences - hits_on_layer.
  - Layer totals count per-layer events (one muon that hits all layers contributes 6 hits).

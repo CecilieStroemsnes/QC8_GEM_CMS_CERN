@@ -71,7 +71,7 @@ class Plots:
     # ------------------------------------------
     # ------ Add 3D polygon patches ------------
     # ------------------------------------------
-    # 
+    
     def add_layer_patch(self, ax, x_poly, y_poly, z_val, fc, ec, alpha=0.25, lw=1.0):
         face = [[(x_poly[i], y_poly[i], z_val) for i in range(len(x_poly))]]
         coll = Poly3DCollection(face, facecolors=fc, edgecolors=ec,
@@ -683,3 +683,112 @@ class Plots:
             plt.tight_layout()
             self._save(f"{basename}{li+1}.png")
             (plt.show() if show else plt.close(fig))
+
+
+# ------------------------------------------
+# -- Exactly 5 hits ------------------------
+# ------------------------------------------
+
+    def plot_3d_trajectories_5of6(self, x0, y0, z0, vx, vy, vz, idx,
+                                elev=22, azim=-35,
+                                show_eta=True, filename="3D_trajectories_5of6.png",
+                                interactive: bool = False, save_key: str = "s"):
+        """
+        Plot only the trajectories that hit exactly L-1 layers (miss one).
+        """
+        eps = 1e-12
+        z_nodes = np.r_[self.geom.Z_TOP_SCIN, self.geom.layer_z, self.geom.Z_BOTTOM_SCIN]
+
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Draw detector planes
+        for zl in self.geom.layer_z:
+            self.add_layer_patch(ax, self.geom.x_top, self.geom.y_top, zl,
+                                fc='lightskyblue', ec='navy', alpha=0.15, lw=1.0)
+        scx = [-self.geom.scintillator_width/2, self.geom.scintillator_width/2,
+                self.geom.scintillator_width/2, -self.geom.scintillator_width/2]
+        scy = [0.0, 0.0, self.geom.scintillator_length, self.geom.scintillator_length]
+        self.add_layer_patch(ax, scx, scy, self.geom.Z_TOP_SCIN,    fc='lightcoral', ec='darkred', alpha=0.20, lw=1.2)
+        self.add_layer_patch(ax, scx, scy, self.geom.Z_BOTTOM_SCIN, fc='lightcoral', ec='darkred', alpha=0.20, lw=1.2)
+
+        def safe_div(dz, vz):
+            vz_safe = np.where(np.abs(vz) < eps, np.copysign(eps, vz), vz)
+            return dz / vz_safe
+
+        # Plot only the “miss-one-layer” tracks
+        for k in idx:
+            t_nodes = safe_div(z_nodes - z0[k], vz[k])
+            xs = x0[k] + vx[k] * t_nodes
+            ys = y0[k] + vy[k] * t_nodes
+            ax.plot(xs, ys, z_nodes, color="red", lw=1.2, alpha=0.7)
+
+        # Optional η overlays
+        if show_eta and hasattr(self.geom, "eta_polys"):
+            z_top_gem = float(np.max(self.geom.layer_z))
+            self._add_eta_overlays_3d(ax, self.geom.eta_polys, [z_top_gem],
+                                    edgecolor='deeppink', lw=1.5, alpha=0.9)
+
+        # Cosmetics
+        ax.set_title("Muon tracks that miss exactly 1 layer")
+        ax.set_xlabel("x (m)"); ax.set_ylabel("y (m)"); ax.set_zlabel("z (m)")
+        ax.set_xlim(-0.35, 0.35)
+        ax.set_ylim(0.0, self.geom.scintillator_length)
+        ax.set_zlim(self.geom.Z_BOTTOM_SCIN - 0.05, self.geom.Z_TOP_SCIN + 0.05)
+        ax.set_box_aspect((0.7, self.geom.scintillator_length,
+                        (self.geom.Z_TOP_SCIN - self.geom.Z_BOTTOM_SCIN)))
+        ax.view_init(elev=elev, azim=azim)
+
+        # Legend: only red + eta
+        legend_lines = [Line2D([0],[0], color="red", lw=1.2, label="miss one layer")]
+        if show_eta:
+            legend_lines.append(Line2D([0],[0], color="deeppink", lw=1.2, label="η boundaries (top layer)"))
+        ax.legend(handles=legend_lines, loc='upper left')
+
+        if interactive:
+            self._interactive_save(fig, filename, save_key=save_key, save_on_close=True)
+            plt.show()
+            plt.close(fig)
+        else:
+            out = (self.output_dir / filename) if self.output_dir else filename
+            fig.savefig(out, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+
+
+    def plot_3d_trajectories_5of6_from_sim(
+        self,
+        sim,
+        N=100_000,
+        max_plot=600,
+        elev=22,
+        azim=-35,
+        show_eta=True,
+        filename="3D_trajectories_5of6.png",
+        interactive=False,
+        save_key="s",
+    ):
+        data = sim.track_layer_hits(N=N)
+        stats = sim.summarize_5of6_from_mask(data["hit_mask"])
+
+        idx = stats["sel_indices"]
+        if idx.size == 0:
+            print("No 5-of-6 tracks found.")
+            return stats  # nothing to plot, but still return stats
+
+        # downsample for plotting if needed
+        if idx.size > max_plot:
+            rng = sim.rng
+            idx = rng.choice(idx, size=max_plot, replace=False)
+
+        self.plot_3d_trajectories_5of6(
+            data["x0"], data["y0"], data["z0"],
+            data["vx"], data["vy"], data["vz"],
+            idx,
+            elev=elev, azim=azim,
+            show_eta=show_eta,
+            filename=filename,
+            interactive=interactive,
+            save_key=save_key,
+        )
+        
+        return stats

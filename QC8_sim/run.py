@@ -20,6 +20,7 @@ def write_text_report(
     eta_counts: Optional[np.ndarray],
     eta_res: Optional[dict],
     fname: str = "summary.txt",
+    stats_5: Optional[dict] = None,
 ):
     """Summary of simulation """
     outdir.mkdir(parents=True, exist_ok=True)
@@ -75,9 +76,24 @@ def write_text_report(
             f.write("(totals row below are event counts per η across layers)\n")
             f.write("Totals per η (counts): " + " ".join([str(int(x)) for x in totals.sum(axis=0)]) + "\n\n")
 
-        f.write("Notes:\n")
+
+        if stats_5 is not None:
+            nC   = int(stats_5.get("n_coinc", 0))
+            n5   = int(stats_5.get("n_exactly_Lminus1", 0))
+            frac = float(stats_5.get("frac_exactly_Lminus1", 0.0))
+            missed_hist = np.asarray(stats_5.get("missed_hist", []), dtype=int)
+
+            f.write("\n--- Exactly 5-of-6 layer hits ---\n")
+            f.write(f"Coincidences considered      : {nC}\n")
+            f.write(f"Tracks with exactly 5/6 hits : {n5} ({100*frac:.2f}%)\n")
+            if missed_hist.size:
+                by_layer = " ".join(f"L{i+1}:{missed_hist[i]}" for i in range(missed_hist.size))
+                f.write(f"Missed-by-layer counts       : {by_layer}\n")
+
+        f.write("\nNotes:\n")
         f.write(' - "Misses" are per-layer: misses = coincidences - hits_on_layer.\n')
         f.write(" - Layer totals count per-layer events (one muon that hits all layers contributes 6 hits).\n")
+
 
     print(f"Summary written to: {fp.resolve()}")
 
@@ -203,10 +219,27 @@ def main():
         except Exception as e:
             print("simulate_eta_acceptance failed:", e)
 
+    # --- 3D plot of tracks that hit exactly 5 of 6 layers (one miss) ---
+    stats_5 = None
+    if hasattr(plots, "plot_3d_trajectories_5of6_from_sim"):
+        stats_5 = plots.plot_3d_trajectories_5of6_from_sim(
+            sim,
+            N=100_000,
+            max_plot=600,
+            elev=22,
+            azim=-35,
+            show_eta=True,
+            filename="3D_trajectories_5of6.png",
+            interactive=True,
+            save_key="s" 
+        )
+    elif hasattr(sim, "compute_5of6_stats"):
+        stats_5 = sim.compute_5of6_stats(N=100_000)
+
     # ------------------------------------------
     # -- Write text summary --------------------
     # ------------------------------------------
-    write_text_report(out, geom, res, eta_counts, eta_res, fname="summary.txt")
+    write_text_report(out, geom, res, eta_counts, eta_res, fname="summary.txt", stats_5=stats_5)
 
     # -- Done ----------------------------------
     plt.close("all")

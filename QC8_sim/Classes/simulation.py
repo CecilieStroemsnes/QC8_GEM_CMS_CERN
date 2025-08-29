@@ -158,6 +158,97 @@ class GEMTrajectorySimulator:
         # Calculate acceptance per eta bin
         acc = totals / max(n_coinc, 1)  # <-- denominator is the same for all k
         return {"totals": totals, "acc": acc, "n_coinc": n_coinc}
+    
+    def track_layer_hits(self, N=100_000, seed=None):
+        """
+        Generate tracks + per-track hit mask across GEM layers for coincident events.
+        Returns:
+        dict with:
+            x0,y0,z0,vx,vy,vz : arrays for coincident tracks (length n_coinc)
+            hit_mask           : (n_coinc, L) boolean (True = inside layer trapezoid)
+            n_coinc            : int
+        """
+        rng = np.random.default_rng(seed) if seed is not None else self.rng
+        L = self.geom.n_layers
+
+        # start positions at top scintillator
+        x0 = rng.uniform(self.geom.scin_xmin, self.geom.scin_xmax, size=N)
+        y0 = rng.uniform(self.geom.scin_ymin, self.geom.scin_ymax, size=N)
+        z0 = np.full(N, self.geom.Z_TOP_SCIN)
+
+        # directions
+        vx, vy, vz = self.sample_cos2_directions(N)
+
+        # bottom coincidence
+        t_bot = (self.geom.Z_BOTTOM_SCIN - z0) / vz
+        valid = t_bot > 0.0
+        xb = x0 + vx*t_bot
+        yb = y0 + vy*t_bot
+        coinc = valid & self.geom.in_scintillator_xy(xb, yb)
+
+        # keep coincident
+        x0, y0, z0 = x0[coinc], y0[coinc], z0[coinc]
+        vx, vy, vz = vx[coinc], vy[coinc], vz[coinc]
+        n_coinc = x0.size
+        if n_coinc == 0:
+            return dict(x0=x0,y0=y0,z0=z0,vx=vx,vy=vy,vz=vz,
+                        hit_mask=np.zeros((0, L), bool), n_coinc=0)
+
+        # intersections for each layer
+        layer_z = self.geom.layer_z
+        # shape (n_coinc, L) times to reach each layer
+        tL = (layer_z[None, :] - z0[:, None]) / vz[:, None]
+        # positions at each layer
+        XI = x0[:, None] + vx[:, None] * tL
+        YI = y0[:, None] + vy[:, None] * tL
+        # forward only
+        fwd = tL > 0.0
+        # inside polygon for each layer
+        inside = self.geom.gem_path.contains_points(
+            np.column_stack([XI.ravel(), YI.ravel()])
+        ).reshape(n_coinc, L)
+        hit_mask = inside & fwd
+        return dict(x0=x0,y0=y0,z0=z0,vx=vx,vy=vy,vz=vz, hit_mask=hit_mask, n_coinc=n_coinc)
+
+    def summarize_5of6_from_mask(self, hit_mask: np.ndarray) -> dict:
+            """
+            Given hit_mask (n_coinc, L) -> stats for tracks that hit exactly L-1 layers.
+            Returns dict with:
+            n_coinc, n_exactly_Lminus1, frac_exactly_Lminus1, missed_hist, sel_indices
+            """
+            nC, L = hit_mask.shape if hit_mask.ndim == 2 else (0, 0)
+            if nC == 0:
+                return {
+                    "n_coinc": 0,
+                    "n_exactly_Lminus1": 0,
+                    "frac_exactly_Lminus1": 0.0,
+                    "missed_hist": np.zeros(L, dtype=int),
+                    "sel_indices": np.array([], dtype=int),
+                }
+
+            hits_per_track = hit_mask.sum(axis=1)                 # (n_coinc,)
+            sel = np.flatnonzero(hits_per_track == (L - 1))       # tracks with exactly one miss
+            n5 = sel.size
+            frac5 = n5 / nC if nC else 0.0
+
+            # which single layer was missed for those tracks
+            missed_layer = np.argmax(~hit_mask[sel], axis=1) if n5 else np.array([], dtype=int)
+            missed_hist = np.bincount(missed_layer, minlength=L)
+
+            return {
+                "n_coinc": int(nC),
+                "n_exactly_Lminus1": int(n5),
+                "frac_exactly_Lminus1": float(frac5),
+                "missed_hist": missed_hist.astype(int),
+                "sel_indices": sel.astype(int),
+            }
+
+    def compute_5of6_stats(self, N=100_000, seed=None) -> dict:
+        """
+        One-liner: run track_layer_hits and summarize 5-of-6 stats.
+        """
+        data = self.track_layer_hits(N=N, seed=seed)
+        return self.summarize_5of6_from_mask(data["hit_mask"])
 
 # Utility: count (x,y) samples per η per layer
 def count_hits_by_eta(geom: ME0_Geometry, hit_xy_layer_list):
