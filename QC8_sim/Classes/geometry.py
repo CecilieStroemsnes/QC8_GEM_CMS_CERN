@@ -1,10 +1,10 @@
 # geometry.py
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.path import Path
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
+#from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+#from matplotlib.lines import Line2D
+#from matplotlib.patches import Patch
 
 class ME0_Geometry:
     """
@@ -92,43 +92,31 @@ class ME0_Geometry:
         # --------------- Scintillator geometry ----------------------
         # -----------------------------------------------------------
 
+        scin_y_off = - (scintillator_length-total_length)/2  # y-offset to center scintillators around ME0
+        #scin_y_off = -0.02
+
         # Scintillator bounds (top view)
         self.scin_xmin = -scintillator_width/2
         self.scin_xmax = scintillator_width/2
-        self.scin_ymin = 0.0
-        self.scin_ymax = scintillator_length
+        self.scin_ymin = scin_y_off
+        self.scin_ymax = scintillator_length + scin_y_off
+
+        if (self.scin_ymax < self.total_length - 1e-6):
+            print("[warn] Top scintillator y_max is below GEM top. η1 coverage may be zero "
+                f"(y_max={self.scin_ymax:.4f} < total_length={self.total_length:.4f}).")
 
         # Scintillator z positions for top and bottom
         self.Z_TOP_SCIN = self.z_top_stack + self.top_gap
         self.Z_BOTTOM_SCIN = self.z_bottom_stack - self.bottom_gap
 
-        # Z-coordinates of the centers of top and bottom scintillators
-        self.scin1_center = self.Z_BOTTOM_SCIN - scintillator_length/2
-        self.scin2_center = self.Z_TOP_SCIN + scintillator_length/2
-
-        # Scintillator outlines (side view)
-        self.scin1_x, self.scin1_y = self.rect_xy(scintillator_width, self.scin1_center, scintillator_length)
-        self.scin2_x, self.scin2_y = self.rect_xy(scintillator_width, self.scin2_center, scintillator_length)
-
         # Scintillator outline (top view)
         self.scin_x_top = [-scintillator_width/2, scintillator_width/2,
                            scintillator_width/2, -scintillator_width/2,
                            -scintillator_width/2]
-        self.scin_y_top = [0, 0,
-                           scintillator_length, scintillator_length,
-                           0]
+        self.scin_y_top = [scin_y_off, scin_y_off,
+                           scintillator_length + scin_y_off, scintillator_length + scin_y_off,
+                           scin_y_off]
         
-    # ----------------------------------------------------------
-    # ----- Calculate rectangle coordinates for side view ------
-    # ----------------------------------------------------------
-    def rect_xy(self, width, z_center, height):
-        """Rectangle coordinates centered at z_center"""
-        x = [-width/2, width/2, width/2, -width/2, -width/2]
-        y = [z_center - height/2, z_center - height/2,
-            z_center + height/2, z_center + height/2,
-            z_center - height/2]
-        return x, y
-
     # -----------------------------------------------------------
     # --------------- Check if point is inside ------------------
     # -----------------------------------------------------------
@@ -235,7 +223,7 @@ class ME0_Geometry:
     def width_at_y(self, y):
         """Full width at vertical coordinate y (m), 0 at bottom - total_length at top."""
         y = float(np.clip(y, 0.0, self.total_length))
-        y_taper_top = self.total_length - self.rect_length  # start of taper
+        y_taper_top = self.total_length - self.rect_length 
         if y >= y_taper_top:
             return self.top_width
         frac = y / y_taper_top if y_taper_top > 0 else 0.0
@@ -284,3 +272,83 @@ class ME0_Geometry:
                 [ -w0/2, y0]
             ]))
         return polys
+    
+    # -----------------------------------------------------------
+    # -- Helpers to see where missed hits are in XY plane -----
+    # -----------------------------------------------------------
+    def y_bounds(self):
+        """(y_min, y_max) of the GEM polygon."""
+        return float(np.min(self.y_top)), float(np.max(self.y_top))
+
+    def x_limits_at_y(self, y: float, tol: float = 1e-12):
+        """
+        Intersect the GEM polygon with the horizontal line y = const.
+        Returns (x_left, x_right). If no intersection, returns (None, None).
+        Robust to horizontal edges and vertex touches.
+        """
+        xpoly = np.asarray(self.x_top, float)
+        ypoly = np.asarray(self.y_top, float)
+        n = len(xpoly)
+        xs = []
+
+        for i in range(n):
+            x1, y1 = xpoly[i], ypoly[i]
+            x2, y2 = xpoly[(i + 1) % n], ypoly[(i + 1) % n]
+
+            # Skip segments completely above or below the scan line
+            if (y < min(y1, y2) - tol) or (y > max(y1, y2) + tol):
+                continue
+
+            # Horizontal edge → include its x-span
+            if abs(y2 - y1) <= tol:
+                xs.extend([x1, x2])
+                continue
+
+            # Proper intersection (linear interp)
+            t = (y - y1) / (y2 - y1)
+            if -tol <= t <= 1 + tol:
+                xs.append(x1 + t * (x2 - x1))
+
+        if not xs:
+            return None, None
+
+        # Deduplicate near-duplicates (vertices) and take extremes
+        xs = np.asarray(xs, float)
+        xs.sort()
+        
+        # compress nearly-equal values
+        uniq = [xs[0]]
+        for v in xs[1:]:
+            if abs(v - uniq[-1]) > 1e-9:
+                uniq.append(v)
+        
+        if len(uniq) < 2:
+            # Degenerate (tangent) hit: treat as touching → left=right
+            return uniq[0], uniq[0]
+        return float(uniq[0]), float(uniq[-1])
+    
+    def eta_index_from_y(self, y: float) -> int:
+        """
+        Return η index (1..K) based on y only, using self.eta_y breaks.
+        If y is above the top break → η1, below the bottom break → ηK.
+        Requires enable_default_me0_eta() or set_eta_layout() called.
+        """
+        if not hasattr(self, "eta_y"):
+            raise RuntimeError("Eta layout not defined. Call enable_default_me0_eta() or set_eta_layout().")
+
+        yv = np.asarray(self.eta_y, float)  # stored top→bottom (descending)
+        K = len(yv) - 1
+        y = float(y)
+
+        if y >= yv[0]:        # above top boundary
+            return 1
+        if y <= yv[-1]:       # below bottom boundary
+            return K
+
+        # inside overall span: find i with yv[i] >= y >= yv[i+1]
+        for i in range(K):
+            y_top, y_bot = yv[i], yv[i+1]
+            if y_top >= y >= y_bot:
+                return i + 1
+
+        return 0  

@@ -10,9 +10,6 @@ from matplotlib.lines import Line2D # for custom legend lines
 from matplotlib.patches import Patch # for custom legend patches
 from matplotlib.ticker import PercentFormatter # for y-axis percent formatting
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection # 3D polygons
-from mpl_toolkits.axes_grid1 import make_axes_locatable # for colorbar placement
-
-from .geometry import ME0_Geometry # ME0 geometry class (from same folder)
 
 class Plots:
     """
@@ -25,8 +22,9 @@ class Plots:
         - per-layer x-occupancy by η
     """
 
-    def __init__(self, geometry, output_dir: str | FsPath | None = None):
+    def __init__(self, geometry, output_dir: str | FsPath | None = None, simulator=None):
         self.geom = geometry
+        self.geom_sim = simulator
         self.output_dir = FsPath(output_dir) if output_dir else None
         if self.output_dir:
             self.output_dir.mkdir(parents=True, exist_ok=True) # ensure directory exists
@@ -35,9 +33,9 @@ class Plots:
     # ------ Saver -----------------------------
     # ------------------------------------------
 
-    def _save(self, filename: str | None):
+    def _save(self, fig: plt.Figure, filename: Optional[str]):
         if self.output_dir and filename:
-            plt.gcf().savefig(self.output_dir / filename, dpi=200, bbox_inches="tight")
+            fig.savefig(self.output_dir / filename, dpi=200, bbox_inches="tight")
 
     # ------------------------------------------
     # ------ Interactive save handler ----------
@@ -68,6 +66,46 @@ class Plots:
         fig.canvas.mpl_connect("key_press_event", on_key)
         fig.canvas.mpl_connect("close_event", on_close)
 
+
+    # ------------------------------------------
+    # ------ Helpers for 3D plotting -----------
+    def _new_3d(self, figsize=(8, 8)):
+        """Create a 3D figure+axis."""
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111, projection='3d')
+        return fig, ax
+
+    def _finalize(self, fig, filename, interactive=False, save_key="s", dpi=200):
+        """
+        Common finalizer: either show interactively (with save-on-key/close),
+        or save immediately to file.
+        """
+        if interactive:
+            self._interactive_save(fig, filename, save_key=save_key, save_on_close=True, dpi=dpi)
+            plt.show()
+            plt.close(fig)
+        else:
+            out = (self.output_dir / filename) if self.output_dir else filename
+            fig.savefig(out, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+
+    def _style_3d(self, ax, elev, azim, title=None):
+        if title:
+            ax.set_title(title)
+        ax.set_xlabel("x (m)")
+        ax.set_ylabel("y (m)")
+        ax.set_zlabel("z (m)")
+        ax.set_xlim(-0.35, 0.35)
+        ax.set_ylim(self.geom.scin_ymin, self.geom.scin_ymax)
+        ax.set_zlim(self.geom.Z_BOTTOM_SCIN - 0.05, self.geom.Z_TOP_SCIN + 0.05)
+        ax.set_box_aspect((
+            0.7,
+            self.geom.scintillator_length,
+            (self.geom.Z_TOP_SCIN - self.geom.Z_BOTTOM_SCIN),
+        ))
+        ax.view_init(elev=elev, azim=azim)
+
+
     # ------------------------------------------
     # ------ Add 3D polygon patches ------------
     # ------------------------------------------
@@ -82,6 +120,22 @@ class Plots:
     # ---------- Single‑axis 3D draw -----------
     # ------------------------------------------
 
+    def _draw_planes(self, ax,
+                    fc_gem='lightskyblue', ec_gem='navy', alpha_gem=0.15, lw_gem=1.0,
+                    fc_scin='lightcoral', ec_scin='darkred', alpha_scin=0.20, lw_scin=1.2):
+        """Draw GEM layers and the two scintillator planes."""
+        # GEM layers
+        for zl in self.geom.layer_z:
+            self.add_layer_patch(ax, self.geom.x_top, self.geom.y_top, zl,
+                                fc=fc_gem, ec=ec_gem, alpha=alpha_gem, lw=lw_gem)
+        # Scintillators
+        scx = [-self.geom.scintillator_width/2,  self.geom.scintillator_width/2,
+                self.geom.scintillator_width/2, -self.geom.scintillator_width/2]
+        scy = [self.geom.scin_ymin, self.geom.scin_ymin,
+                self.geom.scin_ymax, self.geom.scin_ymax]
+        self.add_layer_patch(ax, scx, scy, self.geom.Z_TOP_SCIN,    fc=fc_scin, ec=ec_scin, alpha=alpha_scin, lw=lw_scin)
+        self.add_layer_patch(ax, scx, scy, self.geom.Z_BOTTOM_SCIN, fc=fc_scin, ec=ec_scin, alpha=alpha_scin, lw=lw_scin)
+
     # Works as a 3D snapshot for a chosen view
     def _draw_scene(self, ax, elev, azim,
                     fc_gem='lightskyblue', ec_gem='navy', alpha_gem=0.15,
@@ -89,21 +143,13 @@ class Plots:
                     lw_gem=1.0, lw_scin=1.2, title=None,
                     show_eta=False, y_breaks=None, y_mm=None, mm_bottom=None, mm_top=None):
 
-        # Step 1) Draw GEM layers as flat polygons at their z positions
-        for zl in self.geom.layer_z:
-            self.add_layer_patch(ax, self.geom.x_top, self.geom.y_top, zl,
-                                 fc=fc_gem, ec=ec_gem, alpha=alpha_gem, lw=lw_gem)
-            
-        # Step 2) Draw scintillator planes as rectangles at their z positions
-        scin_x = [-self.geom.scintillator_width/2,  self.geom.scintillator_width/2,
-                   self.geom.scintillator_width/2, -self.geom.scintillator_width/2]
-        scin_y = [0.0, 0.0, self.geom.scintillator_length, self.geom.scintillator_length]
-        self.add_layer_patch(ax, scin_x, scin_y, self.geom.Z_TOP_SCIN,
-                             fc=fc_scin, ec=ec_scin, alpha=alpha_scin, lw=lw_scin)
-        self.add_layer_patch(ax, scin_x, scin_y, self.geom.Z_BOTTOM_SCIN,
-                             fc=fc_scin, ec=ec_scin, alpha=alpha_scin, lw=lw_scin)
+        # Draw GEM layers as flat polygons at their z positions
+        self._draw_planes(ax,
+                  fc_gem=fc_gem, ec_gem=ec_gem, alpha_gem=alpha_gem, lw_gem=lw_gem,
+                  fc_scin=fc_scin, ec_scin=ec_scin, alpha_scin=alpha_scin, lw_scin=lw_scin)
 
-        # Step 3) Optional η overlays on all layers
+
+        # Optional η overlays on all layers
         if show_eta:
             if hasattr(self.geom, "eta_polys"):
                 eta_polys = self.geom.eta_polys
@@ -117,18 +163,8 @@ class Plots:
                     edgecolor='deeppink', lw=0.8, alpha=0.9
                 )
         
-        # Step 4) Cosmetics and labels (add view angles)
-        if title:
-            ax.set_title(title)
-        ax.set_xlabel("x (m)")
-        ax.set_ylabel("y (m)")
-        ax.set_zlabel("z (m)")
-        ax.set_xlim(-0.35, 0.35)
-        ax.set_ylim(0.0, self.geom.scintillator_length)
-        ax.set_zlim(self.geom.Z_BOTTOM_SCIN - 0.05, self.geom.Z_TOP_SCIN + 0.05)
-        ax.set_box_aspect((0.7, self.geom.scintillator_length,
-                           (self.geom.Z_TOP_SCIN - self.geom.Z_BOTTOM_SCIN)))
-        ax.view_init(elev=elev, azim=azim)
+        # Cosmetics and labels (add view angles)
+        self._style_3d(ax, elev, azim, title=title)
 
     # ------------------------------------------
     # ----- Single 3D view (interactive) -------
@@ -144,8 +180,7 @@ class Plots:
         interactive: bool = False,
         save_key: str = "s",
     ):
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111, projection='3d')
+        fig, ax = self._new_3d(figsize=(8, 8))
 
         self._draw_scene(
             ax, elev, azim,
@@ -163,16 +198,8 @@ class Plots:
             legend_patches.append(Line2D([0],[0], color='deeppink', lw=1.2, label='η boundaries'))
         fig.legend(handles=legend_patches, loc="upper left")
 
-        plt.tight_layout()
-
-        if interactive:
-            # rotate freely; press `save_key` to save; closing also saves if not already saved
-            self._interactive_save(fig, filename, save_key=save_key, save_on_close=True)
-            plt.show()
-            plt.close(fig)
-        else:
-            self._save(filename)
-            plt.close(fig)
+        fig.tight_layout()
+        self._finalize(fig, filename, interactive=interactive, save_key=save_key)
 
     # ------------------------------------------
     # ---------- Four views in one figure ------
@@ -191,7 +218,7 @@ class Plots:
         interactive: bool = False,
         save_key: str = "s",
     ):
-        # Default camera presets
+        # Default views
         if views is None:
             views = [("Side", 10, 0), ("Back", 10, 90), ("Top", 90, 0), ("Angled", 20, -60)]
         if len(views) != 4:
@@ -219,17 +246,7 @@ class Plots:
         fig.legend(handles=handles, loc="upper left")
 
         plt.tight_layout()
-
-        # Save / interactive save
-        if interactive:
-            if filename is None:
-                filename = "Stack Geometry.png"
-            self._interactive_save(fig, filename, save_key=save_key, save_on_close=True)
-            plt.show()
-            plt.close(fig)
-        else:
-            self._save(filename)
-            plt.close(fig)
+        self._finalize(fig, filename, interactive=interactive, save_key=save_key)
 
     # ------------------------------------------
     # ---------- Plot acceptance ----------
@@ -246,8 +263,9 @@ class Plots:
         acc = np.asarray(result["acceptance"], float)
 
         fig, ax = plt.subplots(figsize=(6, 4), dpi=150)
-        bars = ax.bar(layers, acc if not as_percent else acc*100,
-                    color="#4da3ff", edgecolor="navy", alpha=0.85)
+        yvals = acc if not as_percent else acc*100
+        bars = ax.bar(layers, yvals,
+                      color="#4da3ff", edgecolor="navy", alpha=0.85)
 
         ax.set_xlabel("Layer", fontsize=12)
         ax.set_ylabel("Acceptance" + (" (%)" if as_percent else ""), fontsize=12)
@@ -258,7 +276,6 @@ class Plots:
             ax.set_ylim(lo, hi)
         else:
             # auto with a touch of headroom
-            yvals = acc if not as_percent else acc*100
             hi = float(np.nanmax(yvals)) if yvals.size else (100 if as_percent else 1)
             ax.set_ylim(0, hi * 1.05)
 
@@ -270,13 +287,14 @@ class Plots:
         if annotate:
             for b in bars:
                 height = b.get_height()
-                ax.annotate(f"{height*100:.1f}%",
+                label = f"{height:.1f}%" if as_percent else f"{height:.3f}"
+                ax.annotate(label,
                             xy=(b.get_x() + b.get_width()/2, height),
                             xytext=(0, 3), textcoords="offset points",
                             ha='center', va='bottom', fontsize=10, color="black")
 
         fig.tight_layout()
-        self._save(filename)
+        self._save(fig, filename)
         plt.close(fig) 
 
     # ------------------------------------------
@@ -304,11 +322,7 @@ class Plots:
 
             # Eta overlay
             if show_eta and hasattr(self.geom, "eta_y"):
-                # horizontal break lines
-                for yb in self.geom.eta_y:
-                    # line from (xl(yb), yb) to (xr(yb), yb); we already know those at breakpoints
-                    # find index of yb in stored array
-                    j = np.where(np.isclose(self.geom.eta_y, yb))[0][0]
+                for j, yb in enumerate(self.geom.eta_y):
                     ax.plot([self.geom.eta_xl[j], self.geom.eta_xr[j]], [yb, yb],
                             color='deeppink', lw=1.2, alpha=0.9)
 
@@ -322,12 +336,12 @@ class Plots:
 
             ax.set_title(f"Layer {i} Hits")
             ax.set_xlabel("X (m)")
-            ax.set_ylim(-0.2, self.geom.scintillator_length + 0.2)
+            ax.set_ylim(self.geom.scin_ymin-0.2, self.geom.scin_ymax + 0.2)
             ax.grid()
 
         axs[0].set_ylabel("Y (m)")
         plt.tight_layout()
-        self._save(filename)
+        self._save(fig, filename)
 
     # ------------------------------------------
     # ---------- 3D Trajectory Plotting ----------
@@ -349,18 +363,10 @@ class Plots:
         eps = 1e-12
         z_nodes = np.r_[self.geom.Z_TOP_SCIN, self.geom.layer_z, self.geom.Z_BOTTOM_SCIN]
 
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111, projection='3d')
+        fig, ax = self._new_3d(figsize=(8, 8))
 
         # planes
-        for zl in self.geom.layer_z:
-            self.add_layer_patch(ax, self.geom.x_top, self.geom.y_top, zl,
-                                fc='lightskyblue', ec='navy', alpha=0.15, lw=1.0)
-        scx = [-self.geom.scintillator_width/2,  self.geom.scintillator_width/2,
-                self.geom.scintillator_width/2, -self.geom.scintillator_width/2]
-        scy = [0.0, 0.0, self.geom.scintillator_length, self.geom.scintillator_length]
-        self.add_layer_patch(ax, scx, scy, self.geom.Z_TOP_SCIN,    fc='lightcoral', ec='darkred', alpha=0.20, lw=1.2)
-        self.add_layer_patch(ax, scx, scy, self.geom.Z_BOTTOM_SCIN, fc='lightcoral', ec='darkred', alpha=0.20, lw=1.2)
+        self._draw_planes(ax)
 
         # line styling (alpha scales with how many we draw)
         n_lines = max(len(idx), 1)
@@ -413,14 +419,8 @@ class Plots:
                                         edgecolor='deeppink', lw=1.5, alpha=0.9)
 
         # cosmetics
-        ax.set_title("Muon trajectories through GEM stack (3D)")
-        ax.set_xlabel("x (m)"); ax.set_ylabel("y (m)"); ax.set_zlabel("z (m)")
-        ax.set_xlim(-0.35, 0.35)
-        ax.set_ylim(0.0, self.geom.scintillator_length)
-        ax.set_zlim(self.geom.Z_BOTTOM_SCIN - 0.05, self.geom.Z_TOP_SCIN + 0.05)
-        ax.set_box_aspect((0.7, self.geom.scintillator_length,
-                        (self.geom.Z_TOP_SCIN - self.geom.Z_BOTTOM_SCIN)))
-        ax.view_init(elev=elev, azim=azim)
+        title = "Muon trajectories through GEM stack (3D)"
+        self._style_3d(ax, elev, azim, title=title)
 
        # legend (single call)
         legend_lines = [
@@ -433,18 +433,9 @@ class Plots:
         leg = ax.legend(handles=legend_lines, loc='upper left', frameon=True)
         leg.get_frame().set_alpha(0.9)
 
+        fig.tight_layout()
         # --- Save correctly ---
-        if interactive:
-            # allow rotation; press save_key to snapshot; close also saves once
-            self._interactive_save(fig, filename, save_key=save_key, save_on_close=True)
-            plt.show()
-            plt.close(fig)
-        else:
-            fig.tight_layout()
-            # save using the local figure, not plt.gcf()
-            out = (self.output_dir / filename) if self.output_dir else filename
-            fig.savefig(out, dpi=200, bbox_inches="tight")
-            plt.close(fig)
+        self._finalize(fig, filename, interactive=interactive, save_key=save_key)
 
         frac = pass_all_count / n_lines
         print(f"Fraction of plotted coincident tracks that hit all layers: {frac:.3f}")
@@ -613,7 +604,7 @@ class Plots:
         fig.suptitle("Per-eta acceptance by layer", fontsize=14, y=0.99)
         fig.tight_layout(rect=(0, 0, 1, 0.96))
 
-        self._save(filename)
+        self._save(fig, filename)
 
     # ------------------------------------------
     # ---------- Per-layer x-occupancy by eta ------
@@ -681,7 +672,7 @@ class Plots:
 
             fig.suptitle(f"Layer {li+1} · x-occupancy by η", fontsize=14, y=0.99)
             plt.tight_layout()
-            self._save(f"{basename}{li+1}.png")
+            self._save(fig, f"{basename}{li+1}.png")
             (plt.show() if show else plt.close(fig))
 
 
@@ -692,25 +683,18 @@ class Plots:
     def plot_3d_trajectories_5of6(self, x0, y0, z0, vx, vy, vz, idx,
                                 elev=22, azim=-35,
                                 show_eta=True, filename="3D_trajectories_5of6.png",
-                                interactive: bool = False, save_key: str = "s"):
+                                interactive: bool = False, save_key: str = "s", 
+                                title: str | None = None):
         """
         Plot only the trajectories that hit exactly L-1 layers (miss one).
         """
         eps = 1e-12
         z_nodes = np.r_[self.geom.Z_TOP_SCIN, self.geom.layer_z, self.geom.Z_BOTTOM_SCIN]
 
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111, projection='3d')
+        fig, ax = self._new_3d(figsize=(8, 8))
 
         # Draw detector planes
-        for zl in self.geom.layer_z:
-            self.add_layer_patch(ax, self.geom.x_top, self.geom.y_top, zl,
-                                fc='lightskyblue', ec='navy', alpha=0.15, lw=1.0)
-        scx = [-self.geom.scintillator_width/2, self.geom.scintillator_width/2,
-                self.geom.scintillator_width/2, -self.geom.scintillator_width/2]
-        scy = [0.0, 0.0, self.geom.scintillator_length, self.geom.scintillator_length]
-        self.add_layer_patch(ax, scx, scy, self.geom.Z_TOP_SCIN,    fc='lightcoral', ec='darkred', alpha=0.20, lw=1.2)
-        self.add_layer_patch(ax, scx, scy, self.geom.Z_BOTTOM_SCIN, fc='lightcoral', ec='darkred', alpha=0.20, lw=1.2)
+        self._draw_planes(ax)
 
         def safe_div(dz, vz):
             vz_safe = np.where(np.abs(vz) < eps, np.copysign(eps, vz), vz)
@@ -730,65 +714,64 @@ class Plots:
                                     edgecolor='deeppink', lw=1.5, alpha=0.9)
 
         # Cosmetics
-        ax.set_title("Muon tracks that miss exactly 1 layer")
-        ax.set_xlabel("x (m)"); ax.set_ylabel("y (m)"); ax.set_zlabel("z (m)")
-        ax.set_xlim(-0.35, 0.35)
-        ax.set_ylim(0.0, self.geom.scintillator_length)
-        ax.set_zlim(self.geom.Z_BOTTOM_SCIN - 0.05, self.geom.Z_TOP_SCIN + 0.05)
-        ax.set_box_aspect((0.7, self.geom.scintillator_length,
-                        (self.geom.Z_TOP_SCIN - self.geom.Z_BOTTOM_SCIN)))
-        ax.view_init(elev=elev, azim=azim)
+        if title is None:
+            title = "Muon tracks that miss exactly 1 layer"
+        self._style_3d(ax, elev, azim, title=title)
 
-        # Legend: only red + eta
+        # Legend: only red + eta        
         legend_lines = [Line2D([0],[0], color="red", lw=1.2, label="miss one layer")]
         if show_eta:
             legend_lines.append(Line2D([0],[0], color="deeppink", lw=1.2, label="η boundaries (top layer)"))
         ax.legend(handles=legend_lines, loc='upper left')
 
-        if interactive:
-            self._interactive_save(fig, filename, save_key=save_key, save_on_close=True)
-            plt.show()
-            plt.close(fig)
-        else:
-            out = (self.output_dir / filename) if self.output_dir else filename
-            fig.savefig(out, dpi=200, bbox_inches="tight")
-            plt.close(fig)
+        self._finalize(fig, filename, interactive=interactive, save_key=save_key)
 
-
-    def plot_3d_trajectories_5of6_from_sim(
-        self,
-        sim,
-        N=100_000,
-        max_plot=600,
-        elev=22,
-        azim=-35,
-        show_eta=True,
-        filename="3D_trajectories_5of6.png",
-        interactive=False,
-        save_key="s",
+    def plot_3d_trajectories_5of6_from_data(
+        self, data, max_plot=600, elev=22, azim=-35,
+        show_eta=True, filename="3D_trajectories_5of6.png",
+        interactive=False, save_key="s",
+        title=None,
     ):
-        data = sim.track_layer_hits(N=N)
-        stats = sim.summarize_5of6_from_mask(data["hit_mask"])
-
+        stats = self.geom_sim.summarize_5of6_from_mask(data["hit_mask"])  # see NOTE below
         idx = stats["sel_indices"]
         if idx.size == 0:
             print("No 5-of-6 tracks found.")
-            return stats  # nothing to plot, but still return stats
+            return stats
 
-        # downsample for plotting if needed
         if idx.size > max_plot:
-            rng = sim.rng
+            rng = self.geom_sim.rng  # NOTE below
             idx = rng.choice(idx, size=max_plot, replace=False)
 
         self.plot_3d_trajectories_5of6(
-            data["x0"], data["y0"], data["z0"],
-            data["vx"], data["vy"], data["vz"],
-            idx,
-            elev=elev, azim=azim,
-            show_eta=show_eta,
-            filename=filename,
-            interactive=interactive,
-            save_key=save_key,
+            data["x0"], data["y0"], data["z0"], data["vx"], data["vy"], data["vz"],
+            idx, elev=elev, azim=azim, show_eta=show_eta,
+            filename=filename, interactive=interactive, save_key=save_key,
+            title=title,
         )
-        
         return stats
+
+    def plot_3d_trajectories_5of6_eta_from_data(
+        self, data, target_eta, max_plot=600, elev=22, azim=-35,
+        show_eta=True, filename=None, interactive=False, save_key="s",
+    ):
+        stats = self.geom_sim.summarize_5of6_in_eta(data, target_eta)
+        idx = stats["sel_indices"]
+        if idx.size == 0:
+            print(f"No 5-of-6 tracks found for eta {target_eta}.")
+            return stats
+
+        if idx.size > max_plot:
+            rng = self.geom_sim.rng
+            idx = rng.choice(idx, size=max_plot, replace=False)
+
+        if filename is None:
+            filename = f"3D_trajectories_5of6_eta{target_eta}.png"
+
+        self.plot_3d_trajectories_5of6(
+            data["x0"], data["y0"], data["z0"], data["vx"], data["vy"], data["vz"],
+            idx, elev=elev, azim=azim, show_eta=show_eta,
+            filename=filename, interactive=interactive, save_key=save_key,
+            title=f"Muon tracks that miss exactly 1 layer (η {target_eta})",
+        )
+        return stats
+    
