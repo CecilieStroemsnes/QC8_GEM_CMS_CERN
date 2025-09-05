@@ -2,8 +2,18 @@
 
 This project simulates the detection efficiency of the ME0 GEM detector stack using cosmic ray muons.
 
-It models trajectories using $\cos^2(\theta)$ angular distribution, applies scintillator coincidence, and produces efficiency plots per layer and per $\eta$-region.
+It generates straight tracks with a $\cos^2(\theta)$ angular distribution, applies a top–bottom scintillator coincidence, and reports efficiencies per layer and per η region. It also gives a detailed “5-of-6 vs 6-of-6” study with strict per-layer and X/Y direction miss classifications.
 
+## Features
+- ME0 geometry, trapezoid-looking layers with configurable stack positions (high/low).
+- Scintillators aligned over and under the stack.
+- Coincidence requirement for the top and bottom scintillators.
+- Calculation of per-layer and per-η region acceptance.
+- 5-of-6 vs 6-of-6 efficiency:
+    - 5/6: Means that the trajectory hits exactly 5 out of 6 layers
+    - 6/6: Means that the trajectory hits exactly 6 out of 6 layers
+    - Strict per-layer: Compares 5/6 that miss a specific layer vs 6/6 that hit that layer in target η.
+    - Axis split (x/y): Classify 5/6 misses in x or y direction.
 
 ## Layout
 - `Classes/`
@@ -19,14 +29,19 @@ It models trajectories using $\cos^2(\theta)$ angular distribution, applies scin
 - Packages: `pip install numpy matplotlib`
 
 ## Quickstart
-Run with default settings (stack positioned high, close to the top scintillator):
+Run with default settings (stack positioned high, number of muons N = 500.000, interactive plot save off):
 ```bash
 python run.py 
 ```
 
-Run with user-defined position (e.g, low):
+Run with user-choosen stack position and number of muons
 ```bash
-python run.py --position low 
+python run.py --position low --N 1000000
+```
+
+Enable interactive 3D/geometry windows (press s in the window to save):
+```bash
+python run.py --interactive
 ```
 
 ### Outputs:
