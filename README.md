@@ -59,6 +59,19 @@ python run.py --interactive
   - Per-η counts/acceptance
   - Global 5-of-6 summary 5-of-6 miss directions (X-left/right, Y-below/above) + per-η breakdown
   - Strict per-layer 5 vs 6 in η=1 and η=8, split by X/Y miss (efficiencies and counts)
+
+#### What the “strict per-layer 5 vs 6” means
+
+For a chosen η band and a specific layer (TOP or BOTTOM):
+- 6-of-6 (n6): tracks that hit all layers and whose hit on the constrained layer lies in the target η.
+- 5-of-6 (n5): tracks that hit exactly 5 layers, miss exactly the constrained layer, and still have ≥1 hit in the target η on other layers.
+- Efficiency reported is n5/(n5+n6) for that η/layer selection.
+
+We also split the 5-of-6 misses by axis:
+- X-only: the constrained-layer intersection lies left/right of the GEM polygon at that x (X-left/X-right).
+- Y-only: the constrained-layer intersection lies above/below the GEM y-span (Y-above/Y-below).
+
+This allows you to compare edge-loss behavior in X versus Y.
   
 #### Optional outputs:
 In run.py (main), there is an interactive option for the stack geometry and the 3D trajectory plots.
