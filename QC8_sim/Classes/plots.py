@@ -592,13 +592,13 @@ class Plots:
             if show_percent:
                 ax.yaxis.set_major_formatter(PercentFormatter(100))
 
-            if annotate:
-                for k, b in enumerate(bars):
-                    n = int(totals[li - 1, k]) if totals.size else 0
-                    ax.annotate(f"n={n}",
-                                xy=(b.get_x() + b.get_width() / 2, b.get_height()),
-                                xytext=(0, 3), textcoords="offset points",
-                                ha="center", va="bottom", fontsize=9, clip_on=True)
+            #if annotate:
+            #    for k, b in enumerate(bars):
+            #        n = int(totals[li - 1, k]) if totals.size else 0
+            #        ax.annotate(f"n={n}",
+            #                    xy=(b.get_x() + b.get_width() / 2, b.get_height()),
+            #                    xytext=(0, 3), textcoords="offset points",
+            #                    ha="center", va="bottom", fontsize=9, clip_on=True)
 
         axs[0].set_ylabel(ylab)
         fig.suptitle("Per-eta acceptance by layer", fontsize=14, y=0.99)

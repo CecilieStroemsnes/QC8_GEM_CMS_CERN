@@ -92,8 +92,7 @@ class ME0_Geometry:
         # --------------- Scintillator geometry ----------------------
         # -----------------------------------------------------------
 
-        scin_y_off = - (scintillator_length-total_length)/2  # y-offset to center scintillators around ME0
-        #scin_y_off = -0.02
+        scin_y_off = - (scintillator_length-total_length)/2  # y-offset to center scintillators around ME0x
 
         # Scintillator bounds (top view)
         self.scin_xmin = -scintillator_width/2
