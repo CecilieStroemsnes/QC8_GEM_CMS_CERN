@@ -55,10 +55,10 @@ python run.py --interactive
 - `eta_eff_by_layer.png` — Per-η acceptance per layer.
 - `x_occupancy_eta_layer*.png` — X-occupancy per η region and layer.
 - `summary.txt` — Summary report:
-      - Per-layer hits/acceptance
-      - Per-η counts/acceptance
-      - Global 5-of-6 summary 5-of-6 miss directions (X-left/right, Y-below/above) + per-η breakdown
-      - Strict per-layer 5 vs 6 in η=1 and η=8, split by X/Y miss (efficiencies and counts)
+  - Per-layer hits/acceptance
+  - Per-η counts/acceptance
+  - Global 5-of-6 summary 5-of-6 miss directions (X-left/right, Y-below/above) + per-η breakdown
+  - Strict per-layer 5 vs 6 in η=1 and η=8, split by X/Y miss (efficiencies and counts)
   
 #### Optional outputs:
 In run.py (main), there is an interactive option for the stack geometry and the 3D trajectory plots.
