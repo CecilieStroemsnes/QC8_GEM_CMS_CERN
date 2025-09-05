@@ -4,6 +4,22 @@ This project simulates the detection efficiency of the ME0 GEM detector stack us
 
 It generates straight tracks with a $\cos^2(\theta)$ angular distribution, applies a top–bottom scintillator coincidence, and reports efficiencies per layer and per η region. It also gives a detailed “5-of-6 vs 6-of-6” study with strict per-layer and X/Y direction miss classifications.
 
+## Quickstart
+Run with default settings (stack positioned high, number of muons N = 500.000, interactive plot save off):
+```bash
+python run.py 
+```
+
+Run with user-choosen stack position and number of muons
+```bash
+python run.py --position low --N 1000000
+```
+
+Enable interactive 3D/geometry windows (press s in the window to save):
+```bash
+python run.py --interactive
+```
+
 ## Features
 - ME0 geometry, trapezoid-looking layers with configurable stack positions (high/low).
 - Scintillators aligned over and under the stack.
@@ -27,22 +43,6 @@ It generates straight tracks with a $\cos^2(\theta)$ angular distribution, appli
 ## Requirements
 - Used Python 3.9
 - Packages: `pip install numpy matplotlib`
-
-## Quickstart
-Run with default settings (stack positioned high, number of muons N = 500.000, interactive plot save off):
-```bash
-python run.py 
-```
-
-Run with user-choosen stack position and number of muons
-```bash
-python run.py --position low --N 1000000
-```
-
-Enable interactive 3D/geometry windows (press s in the window to save):
-```bash
-python run.py --interactive
-```
 
 ### Outputs:
 - `stack_geometry.png` — Four-view geometry with η bands.
