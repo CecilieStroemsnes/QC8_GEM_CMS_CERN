@@ -75,7 +75,6 @@ This allows you to compare edge-loss behavior in X versus Y.
   
 #### Optional outputs:
 In run.py (main), there is an interactive option for the stack geometry and the 3D trajectory plots.
-These should be out-commented if used.
 
 ### Example output
 <img width="543" height="580" alt="3D_trajectories" src="https://github.com/user-attachments/assets/528315f6-4aed-43f2-bd1b-6c4e12b04d9d" />
