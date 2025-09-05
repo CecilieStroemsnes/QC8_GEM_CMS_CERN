@@ -79,6 +79,52 @@ In run.py (main), there is an interactive option for the stack geometry and the 
 ### Example output
 <img width="543" height="580" alt="3D_trajectories" src="https://github.com/user-attachments/assets/528315f6-4aed-43f2-bd1b-6c4e12b04d9d" />
 
+# Notes for GEM lab
+## Geometry updates
+All measurements for the size of the ME0 layers and scintillators are defined under `def __init__` in `geometry.py`.
+The positions of the stack is measured as
+- `bottom_gap`: distance from bottom scintillator to the bottom of the stack
+- `top_gap`: distance from the top of the stack to the top scintillator
+
+NOTE: The bottom_gap and top_gap are measured very loosely.
+
+For the alignment of the scintillators, the y direction is specified to have $(lenght_scintillator - lenght_ME0) / 2$ on each side. So in the simulation it is perfectly aligned.
+This is defined under `scin_y_off´.
+
+The general eta region layout is defined under `def set_eta_layout`, and specifically for ME0 the values are in `def enable_default_me0_eta`.
+
+## GE2/1 extension
+If this code should be used for other geometries, like GE2/1, you need to do the following:
+#### 1. Update geometry shape
+Update:
+- `bottom_width`, `top_width`, `total_length` and `rect_length`.
+  - with GE2/1, set `rect_length=0`
+- Redraw `self.x_top`, `self.y_top` polygon to new outline
+- Keep units in meters!
+
+#### 2. Stack depth
+Update:
+- `n_layers`
+- `layer_spacing`
+
+#### 3. Scintillators
+Update:
+- `scintillator_width`, `scintillator_length` and `scin_y_off` 
+- `bottom_gap` and `top_gap`
+
+#### 4. Eta segmentation
+Update the arrays:
+- `y_mm  = [...]`
+- `xl_mm = [...]`
+- `xr_mm = [...]`
+- in mm (or change code to take meters)
+
+It's also optional to use eta regions in all plots so that they can be removed for simplicity.
+
+#### 5. Labels
+In `run.py`, swap `ME0_Geometry` with `GE21_Geometry`.
+
+
 # Physics Notes - Cosmic Ray Angular Distribution
 
 ## Cosmic rays
