@@ -94,11 +94,12 @@ This is defined under `scin_y_off´.
 The general eta region layout is defined under `def set_eta_layout`, and specifically for ME0 the values are in `def enable_default_me0_eta`.
 
 ## GE2/1 extension
-If this code should be used for other geometries, like GE2/1, you need to do the following:
+To extend the simulation to other GEM geometries (e.g. GE2/1), copy the ME0 class in geometry.py, create a new class (e.g. GE21_Geometry), and update the following parameters:
+
 #### 1. Update geometry shape
 Update:
 - `bottom_width`, `top_width`, `total_length` and `rect_length`.
-  - with GE2/1, set `rect_length=0`
+  - with GE2/1, set `rect_length=0`, because GE2/1 has no rectangular section
 - Redraw `self.x_top`, `self.y_top` polygon to new outline
 - Keep units in meters!
 
