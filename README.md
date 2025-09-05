@@ -45,14 +45,21 @@ python run.py --interactive
 ```
 
 ### Outputs:
-- Geometry plots: Stack Geometry.png
-- Efficiency histogram: efficiency_hist.png
-- Hit maps: Hit_maps.png
-- 3D trajectories: 3D_trajectories.png
-- η-efficiency per layer: eta_eff_by_layer.png
-- X-occupancy per η-region: x_occupancy_eta_layer*.png
-- Text summary: summary.txt
-
+- `stack_geometry.png` — Four-view geometry with η bands.
+- `efficiency_hist.png` — Layer acceptance histogram (relative to coincidence).
+- `Hit_maps.png` — Hit maps per layer (with η overlays).
+- `3D_trajectories.png` — Sampled 3D tracks through the stack.
+- `3D_trajectories_5of6.png` — 3D tracks for exactly 5/6 hits (global).
+- `3D_trajectories_5of6_eta1.png` — 3D tracks for 5/6 with ≥1 hit in η=1.
+- `3D_trajectories_5of6_eta8.png` — 3D tracks for 5/6 with ≥1 hit in η=8.
+- `eta_eff_by_layer.png` — Per-η acceptance per layer.
+- `x_occupancy_eta_layer*.png` — X-occupancy per η region and layer.
+- `summary.txt` — Summary report:
+      - Per-layer hits/acceptance
+      - Per-η counts/acceptance
+      - Global 5-of-6 summary 5-of-6 miss directions (X-left/right, Y-below/above) + per-η breakdown
+      - Strict per-layer 5 vs 6 in η=1 and η=8, split by X/Y miss (efficiencies and counts)
+  
 #### Optional outputs:
 In run.py (main), there is an interactive option for the stack geometry and the 3D trajectory plots.
 These should be out-commented if used.
